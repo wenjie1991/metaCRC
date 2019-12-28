@@ -1,6 +1,0 @@
-CC_somatic_mutation.R
-analysis_coverage.R
-matched_trios_somatic_mutation.R
-prepare_Pyclone_input1.R
-prepare_Pyclone_input2.R
-run_pyclone.sh

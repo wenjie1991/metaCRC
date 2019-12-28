@@ -1,5 +1,5 @@
 # input         ../data/01_prepare_data.allele_frequency.output.tsv
-# output        ../dta/pyclone/tsv/
+# output        ../data/pyclone/tsv/
 
 library(data.table)
 library(magrittr)
