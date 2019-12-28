@@ -27,9 +27,6 @@ multiregion.R
 # input         ../data/multiregion_biopsies/03_annotation/
 # output        Figure2C, Figure2D
 ```
-README.md
-```
-```
 visualize_pyclone_result.R
 ```
 # input         ../data/pyclone/

@@ -5,7 +5,8 @@ prepare_Pyclone_input2.R
 ```
 run_pyclone.sh
 ```
-#!/bin/bash -
+# input         ../data/pyclone/tsv/
+# output        ../data/pyclone/result
 ```
 2_prior_mut_CC.R
 ```
@@ -61,9 +62,6 @@ prepare_Pyclone_input1.R
 #               ../data/02_Metastasis_mut_rate_Local.tsv
 #               ../data/02_Metastasis_mut_rate_Oncotarget.tsv
 #               ../data/02_mutDT.tsv
-```
-README.md
-```
 ```
 1_matched_trios_somatic_mutation.R
 ```
