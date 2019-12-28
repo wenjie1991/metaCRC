@@ -6,5 +6,7 @@ for @function_file -> $function_file {
     my $m = $function_file.slurp ~~ /(\#.*?\n\s*\n)/;
 
     say $function_file.Str;
-    say $m[0].Str;
+    say "```";
+    $m[0].Str.lines.map( -> $l { say $l if $l ~~ /^\#/});
+    say "```";
 }
