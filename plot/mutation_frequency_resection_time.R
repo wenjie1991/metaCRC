@@ -10,6 +10,18 @@ library(readr)
 library(ggplot2)
 library(RColorBrewer)
 
+theme <- theme_bw() + theme(
+    text = element_text(size = 20),
+    line = element_line(size = 1),
+    axis.line = element_line(size = 1),
+    axis.ticks.length = unit(3, units = "mm"),
+    axis.text.x = element_text(
+        margin = margin(t = 2, unit = "mm")
+        , angle = 60, vjust = 1, size = 15, hjust = 1),
+    axis.text.y = element_text(margin = margin(r = 3, l = 5, unit = "mm")),
+    legend.position = "top",
+    ) 
+
 #' # Read data
 # Trios
 dat_trios_p_syn = fread("../data/02_Primary_mut_rate_syn.tsv")
@@ -17,8 +29,8 @@ dat_trios_p_sub = fread("../data/02_Primary_mut_rate_sub.tsv")
 dat_trios_m_syn = fread("../data/02_Metastasis_mut_rate_syn.tsv")
 dat_trios_m_sub = fread("../data/02_Metastasis_mut_rate_sub.tsv")
 
-n_syn_trios = dat_trios_p_syn[1, freq_n / freq * 100]
-n_sub_trios = dat_trios_p_sub[1, freq_n / freq * 100]
+(n_syn_trios = dat_trios_p_syn[1, freq_n / freq * 100])
+(n_sub_trios = dat_trios_p_sub[1, freq_n / freq * 100])
 
 #' # Combind data 
 dat_combind = merge(dat_trios_p_syn, dat_trios_p_sub, all=T, by="symbol", suffixes=c("_p_syn", "_p_sub")) %>% 
@@ -33,7 +45,7 @@ dat_combind[freq_p_syn > 5 | freq_p_sub > 5 | freq_m_syn > 5| freq_m_sub > 5, .(
 write_tsv(dat_combind, "../data/03_mutation_frequency_resection_time.tsv")
 
 #' # Statistics test
-dat_combind_sub = dat_combind[freq_p_syn > 8 | freq_p_sub > 8 | freq_m_syn > 8| freq_m_sub > 8]
+dat_combind_sub = dat_combind[freq_p_syn > 10 | freq_p_sub > 10 | freq_m_syn > 10 | freq_m_sub > 10]
 fisher_result = sapply(1:nrow(dat_combind_sub), function(i) {
     m = dat_combind_sub[i, .(
         freq_n_p_syn, n_syn_trios - freq_n_p_syn, 
@@ -70,4 +82,4 @@ ggplot(data = dat_combind_long) +
     coord_cartesian(ylim = c(0, max(dat_combind_long$mutation_freq) * 1.1)) +
     geom_bar(data = dat_combind_long, position = "dodge", stat = "identity") +
     geom_text(position=position_dodge(width=.9), vjust=0.7, hjust=-0.2, angle=90, size=4) +
-    scale_fill_manual(values=colors) 
+    scale_fill_manual(values=colors)  + theme

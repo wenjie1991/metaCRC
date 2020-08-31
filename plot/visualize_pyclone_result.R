@@ -15,7 +15,7 @@ personList = "../data/pyclone//ID1116012 ../data/pyclone//ID1117428 ../data/pycl
 for (i in 1:length(personList)) {
 	personID = personList[i]
 
-	clone_cluster_table = fread(paste0("./result/", personID, "/tables/cluster.tsv"))
+	clone_cluster_table = fread(paste0("../data/pyclone/result/", personID, "/tables/cluster.tsv"))
 	sample_information = clone_cluster_table$sample_id %>% strsplit("_") %>% ldply
 	clone_cluster_table$personID = sample_information[[1]]
 	clone_cluster_table$sampleType = sample_information[[2]]

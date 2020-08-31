@@ -5,8 +5,9 @@
 library(data.table)
 library(magrittr)
 
-tab = fread("../data/02_mutDT.tsv", key="sample")
+tab = fread("../data/02_mutDT.tsv", key="sample") 
 cd = fread("../data/phenotype.csv", key="pathoID")
+cd = cd[(metastasis_site %in% c("Liver"))]
 cd[, personID := pathoID]
 cd[grepl("^\\d+$", pathoID), personID := paste0("ID", substr(pathoID, 3, 9))]
 
@@ -78,25 +79,31 @@ mut_heatmap = function(mutDT) {
         }
 
         ## add patient annotation
-        ### Therapy
+        cd_sub = cd[, .(personID, Both_treated, primary_site)] %>% unique
         brewer.pal.info
-        therapy = factor(tabNew$Both_treated, levels = c("Chemonaive", "Metastasis_treated", "Both_treated", NA), exclude=NULL)
+
+        ### Therapy
+        therapy = cd_sub$Both_treated
+        therapy = factor(cd_sub$Both_treated, levels = c("Chemonaive", "Metastasis_treated", "Both_treated", NA), exclude=NULL)
         therapy_colors = c(brewer.pal(5, "Oranges")[c(1, 2, 4)], rgb(0, 0, 0, 0.7))[as.integer(therapy)]
+        names(therapy_colors) = cd_sub$personID
         for (s in 1:length(samples)) {
             x = (s) * (mut_width + 2) + 20
             y1 = (length(genes) + 1) * (mut_height + 2 + mut_height + 4) + 40
             y2 = y1 - 2 - mut_height 
-            rect(xleft=x-mut_width, ybottom=y1, xright=x, ytop=y2, col=therapy_colors[s])
+            rect(xleft=x-mut_width, ybottom=y1, xright=x, ytop=y2, col=therapy_colors[samples[s]])
         }
 
         ### Location 
-        location = factor(tabNew$primary_site, levels=c("left", "right", NA), exclude=NULL)
+        location = cd_sub$primary_site
+        location = factor(location, levels=c("left", "right", NA), exclude=NULL)
         location_colors = c(brewer.pal(3, "Greens")[2], brewer.pal(3, "Blues")[2], rgb(0, 0, 0, 0.7))[as.integer(location)]
+        names(location_colors) = cd_sub$personID
         for (s in 1:length(samples)) {
             x = (s) * (mut_width + 2) + 20
             y1 = (length(genes)) * (mut_height + 2 + mut_height + 4) + 40
             y2 = y1 - 2 - mut_height 
-            rect(xleft=x-mut_width, ybottom=y1, xright=x, ytop=y2, col=location_colors[s])
+            rect(xleft=x-mut_width, ybottom=y1, xright=x, ytop=y2, col=location_colors[samples[s]])
         }
         
 
@@ -140,14 +147,14 @@ mut_heatmap = function(mutDT) {
 
 
 
-save_svg = function(tab_sub, filename, gene_order) {
+save_pdf= function(tab_sub, filename, gene_order, all_samples) {
 
     ### reorder
-    m = tabNew[, .(sample, gene)] %>% unique %>% dcast(gene ~ sample) %>% as.matrix
+    m = tab_sub[, .(sample, gene)] %>% unique %>% dcast(gene ~ sample) %>% as.matrix
     rownames(m) = m[, 1]
     m = m[, -1]
     m[!is.na(m)] = 1
-    m[is.na(m)] = 0
+    m[is.na(m)] = 0 
     dimname = dimnames(m)
     m %<>% apply(2, as.numeric)
     dimnames(m) = dimname
@@ -162,12 +169,14 @@ save_svg = function(tab_sub, filename, gene_order) {
         m = m[, order(m[i, ])]
     }
 
-    tabNew$gene %<>% factor(levels = gene_order)
-    tabNew$sample %<>% factor(levels = colnames(m) %>% rev)
+    tab_sub$gene %<>% factor(levels = gene_order)
+    sample_level = colnames(m) %>% rev
+    sample_level = append(sample_level, all_samples[!(all_samples %in% sample_level)])
+    tab_sub$sample %<>% factor(levels = sample_level)
 
     ## draw mutation heatmap
     pdf(filename, height = 20, width = 30)
-    mut_heatmap(tabNew)
+    mut_heatmap(tab_sub)
     dev.off()
 }
 
@@ -200,10 +209,10 @@ gene_order = rownames(m) %>% na.omit
 
 
 tabNew = tab[gene %in% genes & Both_treated=="Chemonaive"]
-save_svg(tabNew, "./mut_heatmap_chemonaive.pdf", gene_order)
+save_pdf(tabNew, "./mut_heatmap_chemonaive.pdf", gene_order, cd[Both_treated == "Chemonaive", personID])
 
 tabNew = tab[gene %in% genes & Both_treated=="Metastasis_treated"]
-save_svg(tabNew, "./mut_heatmap_metastasis_treated.pdf", gene_order)
+save_pdf(tabNew, "./mut_heatmap_metastasis_treated.pdf", gene_order, cd[Both_treated == "Metastasis_treated", personID])
 
 tabNew = tab[gene %in% genes & Both_treated=="Both_treated"]
-save_svg(tabNew, "./mut_heatmap_both_treated.pdf", gene_order)
+save_pdf(tabNew, "./mut_heatmap_both_treated.pdf", gene_order, cd[Both_treated == "Both_treated", personID])

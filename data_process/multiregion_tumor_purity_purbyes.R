@@ -1,5 +1,6 @@
 # input         ../data/multiregion_biopsies/03_annotation/
-# output        Figure2C, Figure2D
+# output        ../data/multiregion_purbyes_estimateion.tsv
+
 library(data.table)
 library(magrittr)
 library(ggplot2)
@@ -8,7 +9,6 @@ library(readr)
 library(plyr)
 library(parallel)
 library(PurBayes)
-library(parallel)
 
 
 # VAF files
@@ -16,10 +16,6 @@ files = dir("../data/multiregion_biopsies/03_annotation/", pattern="tsv", full=T
 person = str_match(basename(files), "\\w+")[, 1]
 
 calc_tumor_purity = function(af_ref, af_alt) {
-    ## 
-    #     af_ref = af_ref_sub
-    #     af_alt = af_alt_sub
-    ##
 
     af_n = af_alt + af_ref
     af_n_all = colSums(af_n)
@@ -111,109 +107,24 @@ read_annoted_vaf = function(i) {
     m_sub
 }
 
-plot_line_graph = function(tab, normal_name, primary_name, metastasis_name) {
-    names(tab) %<>% sub("\\.FRAC", "", .)
+
+# oncogene = fread("../data/allAnnotatedVariants.txt")$Gene %>% unique
+symbol_list = c("APC", "TP53", "KRAS", "BRAF", "AMER1", "CTNNB1", "FBXW7", "Tumor_Purity1", "Tumor_Purity2") %>% unique
+lapply(1:length(files), function(i) {
+    read_annoted_vaf(i)
+    }) -> tab_l
+
+lapply(tab_l, function(tab) {
+    measure_var_names = grep("FRAC", names(tab), value = T)
     tab_long = melt(tab
         , id.vars = c("Gene.refGene", "Start", "Ref", "Alt", "ExonicFunc.refGene")
-        , measure.vars = c(normal_name, primary_name, metastasis_name)
+        , measure.vars = measure_var_names
         , variable.name = "tumor_site"
         , value.name = "VAF"
-        )
-
-    tab_long[, mut_site := paste0(Gene.refGene, ":",  "c.", Ref,  Start, Alt)]
-    tab_long$VAF %<>% as.numeric
-
-    ggplot(tab_long) +
-        aes(x=tumor_site, y=VAF) +
-        geom_line(aes(color=mut_site, group=mut_site)) +
-        geom_point(aes(shape=ExonicFunc.refGene, color=mut_site), size=I(3.5)) 
-}
-
-#+ fig.width=12, fig.height=7, dev='pdf'
-oncogene = fread("../data/allAnnotatedVariants.txt")$Gene %>% unique
-symbol_list = c("APC", "TP53", "KRAS", "BRAF", "AMER1", "CTNNB1", "FBXW7", "Tumor_Purity1", "Tumor_Purity2", oncogene) %>% unique
-# tab1 = read_annoted_vaf(1)
-# tab2 = read_annoted_vaf(2)
-# tab3 = read_annoted_vaf(3)
-# tab4 = read_annoted_vaf(4)
-# tab5 = read_annoted_vaf(5)
-
-
-normal_name = "CHET40_ND"
-primary_name = c(
-    "CHET40_1D"
-    , "CHET40_3D"
-    , "CHET40_4D" , "CHET40_5D"
-    , "CHET40_6D"
     )
-metastasis_name = c(
-    "CHET40_LiMe2"
-    , "CHET40_LiMe3"
-    )
-tab1 = tab1[Gene.refGene %in% symbol_list]
-plot_line_graph(tab1, normal_name, primary_name, metastasis_name)
+    tab_long
+    }) -> tab_l2
 
-normal_name = "CHET54_ND"
-primary_name = c(
-    "CHET54_1D"
-    , "CHET54_3D"
-    , "CHET54_4D"
-    , "CHET54_5D"
-    , "CHET54_6D"
-    )
-metastasis_name = c(
-    "CHET54_Lime_1D"
-    , "CHET54_Lime_2D"
-    , "CHET54_Lime_3D"
-    , "CHET54_Lime_4D"
-    , "CHET54_Lime_5D"
-    , "CHET54_Lime_6D"
-    )
-tab2 = tab2[Gene.refGene %in% symbol_list]
-plot_line_graph(tab2, normal_name, primary_name, metastasis_name)
-
-
-normal_name = "CHET9_ND"
-primary_name = c(
-    "CHET9_1D"
-    , "CHET9_5D"
-    , "CHET9_6D"
-    , "CHET9_7D"
-    )
-metastasis_name = c(
-    "CHET9_LiMe"
-    , "CHET9_LiMe2"
-    , "CHET9_LiMe4"
-    )
-tab3 = tab3[Gene.refGene %in% symbol_list]
-plot_line_graph(tab3, normal_name, primary_name, metastasis_name)
-
-
-normal_name = "CHET_58_ND"
-primary_name = c(
-    "CHET_58_1D"
-    , "CHET_58_2D"
-    , "CHET_58_5D"
-    )
-metastasis_name = c(
-    "CHET_58_LIME_1D"
-    , "CHET_58_LIME_2D"
-    , "CHET_58_LIME_3D"
-    , "CHET_58_LIME_4D"
-    )
-tab4 = tab4[Gene.refGene %in% symbol_list]
-plot_line_graph(tab4, normal_name, primary_name, metastasis_name)
-
-
-normal_name = "Ecol_523_ND"
-primary_name = c(
-    "Ecol_523_1D"
-    , "Ecol_523_2D"
-    )
-metastasis_name = c(
-    "Ecol_523_LiME1D"
-    , "Ecol_523_LiME2D"
-    )
-tab5 = tab5[Gene.refGene %in% symbol_list]
-plot_line_graph(tab5, normal_name, primary_name, metastasis_name)
+tab_dt = rbindlist(tab_l2)
+write_tsv(tab_dt, "../data/multiregion_purbyes_estimateion.tsv")
 

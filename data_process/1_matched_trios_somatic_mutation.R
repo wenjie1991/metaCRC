@@ -14,24 +14,29 @@ library(parallel)
 
 #+ read data, include=FALSE
 files <- dir("../data/matched_triols_annovar_output/03_genotype_field/", full.names = T)
-sampleLable = str_match(files, "(ID|EV-|AMC|P-)\\d+")[, 1]
-i.include = c(1:91, 93:103, 105:108, 124:139) # Included target gene seq, remove the MSI
+samplefilefileLable = str_match(files, "(ID|EV-|AMC|P-)\\d+")[, 1]
+i.include = c(1:106, 122:137) # Included target gene seq, remove the MSI
 sampleLable[setdiff(1:length(files), i.include)]
-# i.include = c(1:91, 93:103, 105:108) # Included target gene seq, remove the MSI
+# The exclude samples
+#  "ID0825371" "ID1119999" "ID185"     "ID250"     "ID262"     "ID278"
+#  "ID353"     "ID381"     "ID413"     "ID503"     "ID509"     "ID523"
+#  "ID526"     "ID627"     "ID707"     "ID718"     "ID721"
 cd = fread("../data/phenotype.csv")
 sampleID_nolivermeta = cd[metastasis_site != "Liver" | MS == "MSI", pathoID]
 i.include = i.include[! (sampleLable[i.include] %in% sampleID_nolivermeta)]
 
 #' Include sample
 sampleLable[i.include]
-sampleLable[setdiff(1:138, i.include)]
+sampleLable[setdiff(1:137, i.include)]
 
 #+ read in mutation, eval=F
 files <- dir("../data/matched_triols_annovar_output/03_genotype_field/", full.names = T)[i.include]
 person <- str_match(files, "(ID|AMC|EV-|P-)\\d+")[, 1]
-mutTabs <- llply(files, function(file) {
-    fread(file, sep = "\t")[, .(CHROM, POS, REF, ALT, C.AD, M.AD, N.AD)] %>% unique
+
+mutTabs <- llply(files, function(f) {
+    fread(f)[, .(CHROM, POS, REF, ALT, C.AD, M.AD, N.AD)] %>% unique
 })
+
 files <- dir("../data/matched_triols_annovar_output/02_annovar/", "gene.hg19_multianno", full.names = T)[i.include]
 annGeneTabs <- llply(files , function(file) {
     fread(file, sep = ",") %>% 
@@ -100,9 +105,14 @@ metastasisMutTabs <- mclapply(parsedTabs, identifySomaticMut, type = "metastasis
 # add the annotation to the mutation data
 annTabs <- llply(1:length(tumorMutTabs), function(i) {
     if (nrow(tumorMutTabs[[i]]) != 0)  {
-        data.table(annLocalTabs[[i]][annGeneTabs[[i]][tumorMutTabs[[i]]]], sample=person[i])
+        annLocalTabs[[i]]$ALT %<>% as.character
+        annGeneTabs[[i]]$ALT %<>% as.character
+        tumorMutTabs[[i]]$ALT %<>% as.character
+        data.table(merge(merge(annLocalTabs[[i]], annGeneTabs[[i]], by = c("CHROM", "POS", "REF", "ALT")), tumorMutTabs[[i]], by = c("CHROM", "POS", "REF", "ALT")), sample=person[i])
     }
 }) %>% rbindlist
+
+
 phenotype <- fread("../data/phenotype.csv")
 phenotype[, personID := pathoID]
 phenotype[!grepl("EV|P-", pathoID), personID := paste0("ID", sub("^20", "", pathoID))]

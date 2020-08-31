@@ -11,6 +11,20 @@ library(data.table)
 library(readr)
 library(ggplot2)
 library(RColorBrewer)
+library(plyr)
+
+
+theme <- theme_bw() + theme(
+    text = element_text(size = 20),
+    line = element_line(size = 1),
+    axis.line = element_line(size = 1),
+    axis.ticks.length = unit(3, units = "mm"),
+    axis.text.x = element_text(
+        margin = margin(t = 2, unit = "mm")
+        , angle = 60, vjust = 1, size = 15, hjust = 1),
+    axis.text.y = element_text(margin = margin(r = 3, l = 5, unit = "mm")),
+    legend.position = "top",
+    ) 
 
 #' # Read data
 # TCGA
@@ -18,15 +32,15 @@ library(RColorBrewer)
 # dat_meta_tcga = fread("../data/02_advanced_stage_TCGA_mut_rate.tsv")
 # CC
 dat_early_cc = fread("../data/02_early_stage_CC_mut_rate.tsv")
-n_early_cc = dat_early_cc[1, freq_n / freq * 100 %>% round]
+(n_early_cc = dat_early_cc[1, freq_n / freq * 100 %>% round])
 dat_meta_cc = fread("../data/02_meta_stage_CC_mut_rate.tsv")
-n_meta_cc = dat_meta_cc[1, freq_n / freq * 100 %>% round]
+(n_meta_cc = dat_meta_cc[1, freq_n / freq * 100 %>% round])
 dat_liver_cc = fread("../data/02_meta_CC_mut_rate.tsv")
-n_liver_cc = dat_liver_cc[1, freq_n / freq * 100 %>% round]
+(n_liver_cc = dat_liver_cc[1, freq_n / freq * 100 %>% round])
 # Trios
 dat_trios_p = fread("../data/02_Primary_mut_rate.tsv")
 dat_trios_m = fread("../data/02_Metastasis_mut_rate.tsv")
-n_trios = dat_trios_p[1, freq_n / freq * 100 %>% round]
+(n_trios = dat_trios_p[1, freq_n / freq * 100 %>% round])
 
 
 #' # Combind data 
@@ -83,4 +97,4 @@ ggplot(data = dat_combind_long) +
     coord_cartesian(ylim = c(0, max(dat_combind_long$mutation_freq) * 1.1)) +
     geom_bar(data = dat_combind_long, position = "dodge", stat = "identity") +
     geom_text(position=position_dodge(width=.9), vjust=0.7, hjust=-0.2, angle=90, size=4.5) +
-    scale_fill_manual(values=colors)
+    scale_fill_manual(values=colors) + theme

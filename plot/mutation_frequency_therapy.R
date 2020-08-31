@@ -12,6 +12,18 @@ library(readr)
 library(ggplot2)
 library(RColorBrewer)
 
+theme <- theme_bw() + theme(
+    text = element_text(size = 20),
+    line = element_line(size = 1),
+    axis.line = element_line(size = 1),
+    axis.ticks.length = unit(3, units = "mm"),
+    axis.text.x = element_text(
+        margin = margin(t = 2, unit = "mm")
+        , angle = 60, vjust = 1, size = 15, hjust = 1),
+    axis.text.y = element_text(margin = margin(r = 3, l = 5, unit = "mm")),
+    legend.position = "top",
+    ) 
+
 #' # Read data
 # Trios
 dat_trios_p_both = fread("../data/02_Primary_mut_rate_both.tsv")
@@ -21,9 +33,9 @@ dat_trios_m_both = fread("../data/02_Metastasis_mut_rate_both.tsv")
 dat_trios_m_naive = fread("../data/02_Metastasis_mut_rate_naive.tsv")
 dat_trios_m_meta = fread("../data/02_Metastasis_mut_rate_meta.tsv")
 
-n_both_trios = dat_trios_p_both[1, freq_n / freq * 100 %>% round]
-n_naive_trios = dat_trios_p_naive[1, freq_n / freq * 100 %>% round]
-n_meta_trios = dat_trios_p_meta[1, freq_n / freq * 100 %>% round]
+(n_both_trios = dat_trios_p_both[1, freq_n / freq * 100 %>% round])
+(n_naive_trios = dat_trios_p_naive[1, freq_n / freq * 100 %>% round])
+(n_meta_trios = dat_trios_p_meta[1, freq_n / freq * 100 %>% round])
 
 #' # Combind data 
 dat_combind = merge(dat_trios_p_both, dat_trios_p_naive, all=T, by="symbol", suffixes=c("_p_both", "_p_naive")) %>% 
@@ -34,11 +46,11 @@ dat_combind = merge(dat_trios_p_both, dat_trios_p_naive, all=T, by="symbol", suf
 dat_combind[dat_combind %>% is.na] = 0
 
 #' # Output Table
-dat_combind[freq_p_both > 11 | freq_p_naive > 11 | freq_p_meta > 11 | freq_m_both > 11| freq_m_naive > 11 | freq_m_meta > 11, .(symbol, freq_p_both, freq_p_naive, freq_p_meta, freq_m_both, freq_m_naive, freq_m_meta)]
+dat_combind[freq_p_both > 10 | freq_p_naive > 10 | freq_p_meta > 10 | freq_m_both > 10| freq_m_naive > 10 | freq_m_meta > 10, .(symbol, freq_p_both, freq_p_naive, freq_p_meta, freq_m_both, freq_m_naive, freq_m_meta)]
 write_tsv(dat_combind, "../data/03_mutation_frequency_therapy.tsv")
 
 #' # Statistics test
-dat_combind_sub = dat_combind[freq_p_both > 11 | freq_p_naive > 11 | freq_p_meta > 11 | freq_m_both > 11| freq_m_naive > 11 | freq_m_meta > 11]
+dat_combind_sub = dat_combind[freq_p_both > 10 | freq_p_naive > 10 | freq_p_meta > 10 | freq_m_both > 10| freq_m_naive > 10 | freq_m_meta > 10 ]
 fisher_result = sapply(1:nrow(dat_combind_sub), function(i) {
     m = dat_combind_sub[i, .(
         freq_n_p_naive, n_naive_trios - freq_n_p_naive,
@@ -78,4 +90,4 @@ ggplot(data = dat_combind_long) +
     coord_cartesian(ylim = c(0, max(dat_combind_long$mutation_freq) * 1.1)) +
     geom_bar(data = dat_combind_long, position = "dodge", stat = "identity") +
     geom_text(position=position_dodge(width=.9), vjust=0.7, hjust=-0.2, angle=90, size=5) +
-    scale_fill_manual(values=colors)
+    scale_fill_manual(values=colors) + theme

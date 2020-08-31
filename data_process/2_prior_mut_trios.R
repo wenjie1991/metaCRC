@@ -32,8 +32,8 @@ library(data.table)
 library(plyr)
 library(readr)
 
-tumorPurityThreshold = 0.10
-normalPurityThreshold = 0.01
+tumorVAFThreshold = 0.10
+# normalVAFThreshold = 0.01 // the filter was applied in previous step
 
 #+ Read in data
 annTabs_raw <- fread("../data/01_trios_somaticMutation_raw.txt")
@@ -65,17 +65,17 @@ annTabs_raw[, unique(personID)]
 
 #' # Mutation count
 #' ## Somatic mutation
-somaticMutation <- annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) | (M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) 
+somaticMutation <- annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) | (M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) 
     , .(Gene.refGene, personID)][, .(n=length(unique(personID))), by=Gene.refGene][order(n, decreasing=T)]
 (somaticMutation[n >= 4][, p := n / length(unique(annTabs2[, personID]))])
 
 #' ## Primary Mutation
-somaticMutationP <- annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2), .(Gene.refGene, personID)][, .(n=length(unique(personID))), by=Gene.refGene][order(n, decreasing=T)]
+somaticMutationP <- annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2), .(Gene.refGene, personID)][, .(n=length(unique(personID))), by=Gene.refGene][order(n, decreasing=T)]
 (somaticMutationP[n >= 4])
 
 
 #' ## Metastasis Mutation
-somaticMutationM <- annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2), .(Gene.refGene, personID)][, .(n=length(unique(personID))), by=Gene.refGene][order(n, decreasing=T)]
+somaticMutationM <- annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2), .(Gene.refGene, personID)][, .(n=length(unique(personID))), by=Gene.refGene][order(n, decreasing=T)]
 (somaticMutationM[n >= 4])
 
 somaticMutationP[, group := "primary"]
@@ -99,13 +99,13 @@ AF.candidate[, p.adj := p.adjust(p, method="BH")]
 candidateGene = somaticMutationPM[n > 4, Gene.refGene] %>% unique
 write_tsv(AF.candidate, "../data/02_VAF_t_test.tsv")
 
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_metastasis * 100
 exonFreqC = exonFreq
 write_tsv(exonFreqC, "../data/02_Primary_mut_rate.tsv")
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 
 
@@ -114,89 +114,89 @@ exonFreqM = exonFreq
 write_tsv(exonFreqM, "../data/02_Metastasis_mut_rate.tsv")
 
 #' ### Mutation between location
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & primary_site == "right", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & primary_site == "right", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_right_metastasis * 100
 exonFreqC_right = exonFreq
 write_tsv(exonFreqC_right, "../data/02_Primary_mut_rate_right.tsv")
 
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & primary_site == "left", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & primary_site == "left", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_left_metastasis * 100
 exonFreqC_left = exonFreq
 write_tsv(exonFreqC_left, "../data/02_Primary_mut_rate_left.tsv")
 
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & primary_site == "right", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & primary_site == "right", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_right_metastasis * 100
 exonFreqM_right = exonFreq
 write_tsv(exonFreqM_right, "../data/02_Metastasis_mut_rate_right.tsv")
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & primary_site == "left", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & primary_site == "left", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_left_metastasis * 100
 exonFreqM_left = exonFreq
 write_tsv(exonFreqM_left, "../data/02_Metastasis_mut_rate_left.tsv")
 
 #' ### Mutation between resection time
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & Resection_timing == "Concurrent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & Resection_timing == "Concurrent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_syn_metastasis * 100
 exonFreqC_syn = exonFreq
 write_tsv(exonFreqC_syn, "../data/02_Primary_mut_rate_syn.tsv")
 
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & Resection_timing == "Subsequent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & Resection_timing == "Subsequent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_sub_metastasis * 100
 exonFreqC_sub = exonFreq
 write_tsv(exonFreqC_sub, "../data/02_Primary_mut_rate_sub.tsv")
 
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & Resection_timing == "Concurrent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & Resection_timing == "Concurrent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_syn_metastasis * 100
 exonFreqM_syn = exonFreq
 write_tsv(exonFreqM_syn, "../data/02_Metastasis_mut_rate_syn.tsv")
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & Resection_timing == "Subsequent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & Resection_timing == "Subsequent", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_sub_metastasis * 100
 exonFreqM_sub = exonFreq
 write_tsv(exonFreqM_sub, "../data/02_Metastasis_mut_rate_sub.tsv")
 
 #' ### Mutation between Chemotherapy 
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & Both_treated == "Both_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & Both_treated == "Both_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_both_metastasis * 100
 exonFreqC_both = exonFreq
 write_tsv(exonFreqC_both, "../data/02_Primary_mut_rate_both.tsv")
 
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & Both_treated == "Chemonaive", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & Both_treated == "Chemonaive", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_naive_metastasis * 100
 exonFreqC_naive = exonFreq
 write_tsv(exonFreqC_naive, "../data/02_Primary_mut_rate_naive.tsv")
 
-exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2) & Both_treated == "Metastasis_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2) & Both_treated == "Metastasis_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq =  exonFreq$freq / n_meta_metastasis * 100
 exonFreqC_meta = exonFreq
 write_tsv(exonFreqC_meta, "../data/02_Primary_mut_rate_meta.tsv")
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & Both_treated == "Both_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & Both_treated == "Both_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_both_metastasis * 100
 exonFreqM_both = exonFreq
 write_tsv(exonFreqM_both, "../data/02_Metastasis_mut_rate_both.tsv")
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & Both_treated == "Chemonaive", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & Both_treated == "Chemonaive", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_naive_metastasis * 100
 exonFreqM_naive = exonFreq
 write_tsv(exonFreqM_naive, "../data/02_Metastasis_mut_rate_naive.tsv")
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2) & Both_treated == "Metastasis_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2) & Both_treated == "Metastasis_treated", .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_meta_metastasis * 100
 exonFreqM_meta = exonFreq
@@ -210,37 +210,37 @@ n_oncotarget = annTabs_raw[grepl("^AMC", personID)]$personID %>% table %>% lengt
 # n_NG = annTabs_raw[grepl("^P\\-", personID)]$personID %>% table %>% length
 (data.frame(n_MSK, n_local, n_oncotarget))
 
-exonFreq = annTabs2[(grepl("^EV", personID) | grepl("^P\\-", personID)) & (C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(grepl("^EV", personID) | grepl("^P\\-", personID)) & (C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_MSK * 100
 exonFreqM_meta = exonFreq
 write_tsv(exonFreqM_meta, "../data/02_Primary_mut_rate_MSK.tsv")
 
-exonFreq = annTabs2[grepl("^ID\\d", personID) & (C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[grepl("^ID\\d", personID) & (C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_local * 100
 exonFreqM_meta = exonFreq
 write_tsv(exonFreqM_meta, "../data/02_Primary_mut_rate_Local.tsv")
 
-exonFreq = annTabs2[grepl("^AMC", personID) & (C.A / (C.A + C.R + 1) > tumorPurityThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[grepl("^AMC", personID) & (C.A / (C.A + C.R + 1) > tumorVAFThreshold & C.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_oncotarget * 100
 exonFreqM_meta = exonFreq
 write_tsv(exonFreqM_meta, "../data/02_Primary_mut_rate_Oncotarget.tsv")
 
-exonFreq = annTabs2[(grepl("^EV", personID) | grepl("^P\\-", personID)) & (M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[(grepl("^EV", personID) | grepl("^P\\-", personID)) & (M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_MSK * 100
 exonFreqM_meta = exonFreq
 write_tsv(exonFreqM_meta, "../data/02_Metastasis_mut_rate_MSK.tsv")
 
-exonFreq = annTabs2[grepl("^ID\\d", personID) & (M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[grepl("^ID\\d", personID) & (M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_local * 100
 exonFreqM_meta = exonFreq
 write_tsv(exonFreqM_meta, "../data/02_Metastasis_mut_rate_Local.tsv")
 
-exonFreq = annTabs2[grepl("^AMC", personID) & (M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
+exonFreq = annTabs2[grepl("^AMC", personID) & (M.A / (M.A + M.R + 1) > tumorVAFThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
 exonFreq = exonFreq[, .(symbol, freq_n)]
 exonFreq$freq = exonFreq$freq / n_oncotarget * 100
 exonFreqM_meta = exonFreq
