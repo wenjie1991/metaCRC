@@ -14,7 +14,7 @@ library(parallel)
 
 #+ read data, include=FALSE
 files <- dir("../data/matched_triols_annovar_output/03_genotype_field/", full.names = T)
-samplefilefileLable = str_match(files, "(ID|EV-|AMC|P-)\\d+")[, 1]
+sampleLable = str_match(files, "(ID|EV-|AMC|P-)\\d+")[, 1]
 i.include = c(1:106, 122:137) # Included target gene seq, remove the MSI
 sampleLable[setdiff(1:length(files), i.include)]
 # The exclude samples
@@ -163,8 +163,8 @@ prepare_af = function(af_alt, af_ref, af_n) {
 
 personID_list = annTabs3$personID %>% unique
 local_personID = personID_list %>% grep("^ID|AM", ., value=T)
-# 
-# person = local_personID[i]
+ 
+person = local_personID[i]
 library(parallel)
 library(PurBayes)
 library(plyr)
@@ -194,3 +194,4 @@ setkeyv(annTabs2, c('CHROM', 'POS', 'REF', 'ALT'))
 setkeyv(normalMutTabs, c('CHROM', 'POS', 'REF', 'ALT'))
 annTabs2 <- annTabs2[!normalMutTabs]
 write_tsv(annTabs2, "../data/01_trios_somaticMutation.txt")
+write_tsv(annTabs2[C.A / (C.A + C.R + 1) > 0.1 | M.A / (M.A + M.R + 1) > 0.1], "../data/01_trios_somaticMutation_upload.txt")

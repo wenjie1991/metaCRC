@@ -66,11 +66,18 @@ do_fit = function(patient_name, tissue = "primary") {
 
 }
 
+library(stringr)
 sapply(patient_name_v, function(x) {
-    do_fit(x, "primary")$emfit$purity
+    res = do_fit(x, "primary")
+    patient_name_x = x %>% sub("-$", "", .)
+    write_tsv(res$emfit$cncf, str_glue("../data/FACETS/cncf_{patient_name_x}_primary.tsv"))
+    res$emfit$purity
 }) -> purity_primary_v
 sapply(patient_name_v, function(x) {
-    do_fit(x, "metastasis")$emfit$purity
+    res = do_fit(x, "metastasis")
+    patient_name_x = x %>% sub("-$", "", .)
+    write_tsv(res$emfit$cncf, str_glue("../data/FACETS/cncf_{patient_name_x}_metastasis.tsv"))
+    res$emfit$purity
 }) -> purity_metastasis_v
 
 df = data.frame(
