@@ -45,11 +45,16 @@ annGeneTabs <- llply(files , function(file) {
 })
 files <- dir("../data/matched_triols_annovar_output/02_annovar/", "local.hg19_multianno", full.names = T)[i.include]
 annLocalTabs <- llply(files , function(file) {
-    fread(file, sep = ",") %>% 
-        rename(c("Chr" = "CHROM", "Start" = "POS", "Ref" = "REF", "Alt" = "ALT")) %>% unique %>% 
-        setkey(CHROM, POS, REF, ALT)
+    res = fread(file, sep = ",") %>% 
+        rename(c("Chr" = "CHROM", "Start" = "POS", "Ref" = "REF", "Alt" = "ALT")) %>% unique
+    if (is.logical(res$ALT[1])) {
+        res$ALT = rep("T", length(res$ALT))
+    }
+    setkeyv(res, c("CHROM", "POS", "REF", "ALT"))
+    res
 })
 
+annLocalTabs
 
 #+ functions and theme, include=F
 parseAD <- function(data){
@@ -105,13 +110,9 @@ metastasisMutTabs <- mclapply(parsedTabs, identifySomaticMut, type = "metastasis
 # add the annotation to the mutation data
 annTabs <- llply(1:length(tumorMutTabs), function(i) {
     if (nrow(tumorMutTabs[[i]]) != 0)  {
-        annLocalTabs[[i]]$ALT %<>% as.character
-        annGeneTabs[[i]]$ALT %<>% as.character
-        tumorMutTabs[[i]]$ALT %<>% as.character
         data.table(merge(merge(annLocalTabs[[i]], annGeneTabs[[i]], by = c("CHROM", "POS", "REF", "ALT")), tumorMutTabs[[i]], by = c("CHROM", "POS", "REF", "ALT")), sample=person[i])
     }
 }) %>% rbindlist
-
 
 phenotype <- fread("../data/phenotype.csv")
 phenotype[, personID := pathoID]
@@ -147,47 +148,7 @@ annTabs3 <- annTabs[
     & (as.numeric(`1000g2015aug_all`) < 0.01 | `1000g2015aug_all` == "." | is.na(`1000g2015aug_all`))
     & (as.numeric(ExAC_ALL) < 0.05 | ExAC_ALL == "." | is.na(ExAC_ALL))
     ]
-# 
-## Purity
-prepare_af = function(af_alt, af_ref, af_n) {
-    af_mut = af_alt + af_ref
-    ratio_n = af_mut / af_n * sum(af_n) / sum(af_mut)
-    cnv_i = abs(log2(ratio_n)) < log2(1.2)
-    deepth = af_mut > 20 & af_mut < 100
-    somatic_mut = (af_alt / (af_ref + af_alt + 1) > 0.15) & (af_alt / (af_ref + af_alt + 1) < 0.7);
-
-    af_ref_s = af_ref[cnv_i & deepth & somatic_mut]
-    af_alt_s = af_alt[cnv_i & deepth & somatic_mut]
-    list(af_ref_s = af_ref_s, af_alt_s = af_alt_s)
-}
-
-personID_list = annTabs3$personID %>% unique
-local_personID = personID_list %>% grep("^ID|AM", ., value=T)
  
-person = local_personID[i]
-library(parallel)
-library(PurBayes)
-library(plyr)
-purity_l = mclapply(local_personID, function(person) {
-    af_alt_p = annTabs3[personID == person, C.A]
-    af_ref_p = annTabs3[personID == person, C.R]
-    af_alt_m = annTabs3[personID == person, M.A]
-    af_ref_m = annTabs3[personID == person, M.R]
-    af_n     = annTabs3[personID == person, N.A + N.R]
-
-    af_l_p = prepare_af(af_alt_p, af_ref_p, af_n)
-    af_l_m = prepare_af(af_alt_m, af_ref_m, af_n)
-
-    PB_p = try(PurBayes(af_l_p$af_ref_s + af_l_p$af_alt_s, af_l_p$af_alt_s), TRUE)
-    PB_summary_p = summary(PB_p)
-    PB_m = try(PurBayes(af_l_m$af_ref_s + af_l_m$af_alt_s, af_l_m$af_alt_s), TRUE)
-    PB_summary_m = summary(PB_m)
-    r = c(person, PB_summary_p[[1]], PB_summary_m[[1]])
-    r
-        }, mc.cores = 7)
-purity_m = ldply(purity_l[-c(1, 13, 14)])
-names(purity_m) = c("personID", "median_p", "p5_p", "p95_p", "median_m", "p5_m", "p95_m") 
-write_tsv(purity_m, "../data/01_tumor_purity.tsv")
 
 # Output filtered mutation
 setkeyv(annTabs2, c('CHROM', 'POS', 'REF', 'ALT'))

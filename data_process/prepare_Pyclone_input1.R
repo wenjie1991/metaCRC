@@ -3,49 +3,67 @@
 
 annTabs = fread("../data/01_trios_somaticMutation_raw.txt")
 
-annTabs3 <- annTabs[
-	#     (!(ExonicFunc.refGene %in% c("synonymous SNV")))
-	#     & (Func.refGene %in% c("exonic", "exonic;exonic", "exonic;splicing", "ncRNA_exonic", "splicing"))
-	(as.numeric(esp6500siv2_all) < 0.01 | esp6500siv2_all == "." | is.na(esp6500siv2_all)) 
-	& (as.numeric(`1000g2015aug_all`) < 0.01 | `1000g2015aug_all` == "." | is.na(`1000g2015aug_all`))
-	& (as.numeric(ExAC_ALL) < 0.05 | ExAC_ALL == "." | is.na(ExAC_ALL))
-	]
 
+## Pyclone input with CNV infered by FACETS
+annTabs4 <- annTabs[
+    #     (!(ExonicFunc.refGene %in% c("synonymous SNV")))
+    C.A / (C.A + C.R + 1) > 0.1 | M.A / (M.A + M.R + 1) > 0.1
+    & (Func.refGene %in% c("exonic", "exonic;exonic", "exonic;splicing", "ncRNA_exonic", "splicing"))
+    & (as.numeric(esp6500siv2_all) < 0.01 | esp6500siv2_all == "." | is.na(esp6500siv2_all)) 
+    & (as.numeric(`1000g2015aug_all`) < 0.01 | `1000g2015aug_all` == "." | is.na(`1000g2015aug_all`))
+    & (as.numeric(ExAC_ALL) < 0.05 | ExAC_ALL == "." | is.na(ExAC_ALL))
+    ]
 
-tumor_purity = fread("../data/01_tumor_purity.tsv")
-
-personID_list = annTabs3$personID %>% unique
+personID_list = annTabs4$personID %>% unique
 local_personID = personID_list %>% grep("^ID|AM", ., value=T)
 
 library(parallel)
 library(plyr)
+library(stringr)
+
 
 lapply(local_personID, function(person) {
+    person = personID_list[1]
 
-    af_alt_p = annTabs3[personID == person, C.A]
-    af_ref_p = annTabs3[personID == person, C.R]
-    af_alt_m = annTabs3[personID == person, M.A]
-    af_ref_m = annTabs3[personID == person, M.R]
-    af_n     = annTabs3[personID == person, N.A + N.R]
+    af_alt_p = annTabs4[personID == person, C.A]
+    af_ref_p = annTabs4[personID == person, C.R]
+    af_alt_m = annTabs4[personID == person, M.A]
+    af_ref_m = annTabs4[personID == person, M.R]
+    af_n     = annTabs4[personID == person, N.A + N.R]
 
-	purity_p = tumor_purity[personID == person, median_p]
-	purity_m = tumor_purity[personID == person, median_m]
+    chr    = annTabs4[personID == person, CHROM] %>% sub("chr", "", .)
+    loc      = annTabs4$POS
 
-	af_p = af_alt_p + af_ref_p 
-	af_m = af_alt_m + af_ref_m 
+    cnf_p = fread(str_glue("../data/FACETS/cncf_{person}_primary.tsv"))
+    cnf_m = fread(str_glue("../data/FACETS/cncf_{person}_metastasis.tsv"))
 
-	ratio_p = af_p / af_n * sum(af_n) / sum(af_p)
-	ratio_m = af_m / af_n * sum(af_n) / sum(af_m)
-	cnv_i = abs(log2(ratio_p)) < log2(1.2) & abs(log2(ratio_m)) < log2(1.2)
-	#     deepth_i = af_p > 20 & af_p < 300 & af_m > 20 & af_m < 300
-	i = cnv_i #& deepth_i
+    #TBD
+    cnv_p_l = lapply(1:length(loc), function(i) {
+        cnf_p[chrom == chr[i] & start < loc[i] & loc[i] < end, .(tcn.em,  lcn.em)]
+        }) 
+    cnv_m_i = lapply(1:length(loc), function(i) {
+        cnf_m[chrom == chr[i] & start < loc[i] & loc[i] < end, .(tcn.em, lcn.em)]
+        })
 
-	out = annTabs3[personID == person][i][, .(mutation_id = paste0(Gene.refGene, "_", CHROM, ":", POS, "-", End, "_", REF, ":", ALT), C.A, C.R, M.A, M.R, N.A, N.R)]
+	out = annTabs4[personID == person][!is.na(cnv_p_l)][, .(
+        mutation_id = paste0(Gene.refGene, "_", CHROM, ":", POS, "-", End.x, "_", REF, ":", ALT)
+        , C.A
+        , C.R
+        , M.A
+        , M.R
+        , N.A
+        , N.R
+        , tcn_p = cnv_p$tcn.em
+        , lcn_p = cnv_p$lcn.em
+        , tcn_m = cnv_m$tcn.em
+        , lcn_p = cnv_m$lcn.em
+        )]
 
 	return(out)
-}) -> annTabs4
-names(annTabs4) = local_personID
+}) -> annTabsX
 
-sapply(annTabs4, function(x) {nrow(x)})
+names(annTabsX) = local_personID
 
-ldply(annTabs4, .id = "personID") %>% write_tsv("../data/01_prepare_data.allele_frequency.output.tsv")
+sapply(annTabsX, function(x) {nrow(x)})
+
+ldply(annTabsX, .id = "personID") %>% write_tsv("../data/01_prepare_data.allele_frequency.output2.tsv")

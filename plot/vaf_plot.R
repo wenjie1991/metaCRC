@@ -77,15 +77,7 @@ somaticMutationPM$Gene.refGene %<>% factor(
 somaticMutation$Gene.refGene %<>% factor(levels=somaticMutation$Gene.refGene)
 
 #' # Candidate Gene
-geneName <- somaticMutation[n >= 4, Gene.refGene]
-AF.candidate <- ldply(as.character(geneName), function(i) {
-    print(i)
-    x <- annTabs2[Gene.refGene == i, .(AF.C = C.A / (C.A + C.R + 1) , AF.M = M.A / (M.A + M.R + 1))][, AF.M - AF.C]
-    r = t.test(x)
-    c(deltaMedian = mean(x),  p = r$p.value, symbol=i)
-}) %>% data.table
-AF.candidate
-AF.candidate[, p.adj := p.adjust(p, method="BH")]
+
 candidateGene = somaticMutationPM[n > 4, Gene.refGene] %>% unique
 
 #' ### Allelle Frequency 
@@ -123,7 +115,8 @@ exonFreq$freq =  exonFreq$freq / n_metastasis * 100
 exonFreqM = exonFreq
 
 deltaAF$Gene.refGene %<>% factor(levels = exonFreqM[order(freq, decreasing = T), symbol])
-deltaAFlong = deltaAFlong[, .(AF = max(AF), deltaAF = deltaAF[which.max(AF)], loci=loci[which.max(AF)]), by=c("Gene.refGene", "source", "personID", "AF_Type")]
+deltaAFlong = deltaAFlong[AF_Type == "AF.M", .(AF = max(AF), deltaAF = deltaAF[which.max(AF)], loci=loci[which.max(AF)]), by=c("Gene.refGene", "source", "personID", "AF_Type")]
+deltaAFlong = deltaAFlong[Gene.refGene %in% exonFreqM[order(freq, decreasing = T), symbol][1:12]]
 
 #+ Allele Frequency Wilcox P lt 0.3,  fig.height=7, fig.width=13, dev='svg'
 deltaAFlong_draw = deltaAFlong[, .(Gene.refGene, deltaAF, source)] %>% unique
@@ -133,6 +126,8 @@ ggplot(data= deltaAFlong_draw %>% unique, aes(x=Gene.refGene, deltaAF)) +
     geom_jitter(width=0.3, aes(color=source), alpha=0.3, size=3) + 
     xlab("Gene") + ylab("VAF_Metastasis - VAF_Primary") + theme
 
+#+ statistics Test
+deltaAFlong_draw[, .(p = wilcox.test(deltaAF)$p.value, n = .N), by = Gene.refGene]
 
 #' ### Allele Frequency of small Wilcox P value
 #+ AF by sample type,  fig.height=7, fig.width=10, dev='svg'

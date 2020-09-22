@@ -246,7 +246,6 @@ exonFreq$freq = exonFreq$freq / n_oncotarget * 100
 exonFreqM_meta = exonFreq
 write_tsv(exonFreqM_meta, "../data/02_Metastasis_mut_rate_Oncotarget.tsv")
 
-annTabs2$datasetName %>% table
 
 #' ### Allelle Frequency 
 deltaAF_all <- annTabs2[, .(

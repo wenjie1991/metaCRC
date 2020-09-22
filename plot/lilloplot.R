@@ -5,11 +5,9 @@ library(org.Hs.eg.db)
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 library(RColorBrewer)
 
-
 lolliplot.plot = function(symbol, start_adj=0, end_adj=0, type='circle') {
 
-
-    #     symbol = "TP53"; end_adj = 10; start_adj = 10; type = 'circle'
+    symbol = "APC"; end_adj = 10; start_adj = 10; type = 'circle'
     gene = genes(TxDb.Hsapiens.UCSC.hg19.knownGene)
     id = select(org.Hs.eg.db, symbol, "ENTREZID", "SYMBOL")$ENTREZID
     gr = gene[id]
@@ -26,7 +24,9 @@ lolliplot.plot = function(symbol, start_adj=0, end_adj=0, type='circle') {
     mut_sub_metastasis = mut_sub[M.A / (M.A + M.R + 1) > 0,  
         .(Gene.refGene, CHROM, POS, REF, ALT, ExonicFunc.refGene, Both_treated, primary_site, Resection_timing, personID, value1=M.A / (M.A + M.R + 1) * 100)]
     mut_sub_metastasis[, value2 := 100-value1]
-
+    
+    wilcox.test(mut_sub_primary[primary_site == "left", POS], mut_sub_primary[primary_site == "right", POS])
+    mut_sub_primary[primary_site %in% c("left", "right")]
 
     mut_freq_primary = GRanges(mut_sub_primary$CHROM, IRanges(mut_sub_primary$POS, mut_sub_primary$POS))
     mut_freq_metastasis = GRanges(mut_sub_metastasis$CHROM, IRanges(mut_sub_metastasis$POS, mut_sub_metastasis$POS))
@@ -117,7 +117,7 @@ lolliplot.plot = function(symbol, start_adj=0, end_adj=0, type='circle') {
 
     features = x
     names(features) <- c(trs[[1]]$name)
-    features$fill <- c("#d96918")
+    features$fill <- "#d96918"
     #     features$height <- c(.03)
 
     
@@ -143,6 +143,7 @@ lolliplot.plot = function(symbol, start_adj=0, end_adj=0, type='circle') {
     #     dandelion.plot(mut_freq_location1, features, ranges=r, type=type, xaxis=T, cex=0.4)
     #     dandelion.plot(mut_freq_location2, features, ranges=r, type=type, xaxis=T, cex=0.4)
     # dandelion.plot(mut_freq, features, ranges=gr, type='pin', maxgaps=1/100)
+        # statistics comparing the locaion between left and right
 
     ## Therapy
     #     print("########## Therapy ##########")

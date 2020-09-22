@@ -3,3 +3,10 @@ data.zip
 *.DS_Store
 *.html
 *.pdf
+data_process/ascat_analysis.R
+data_process/facets_analysis.R
+data_process/matched_trios_purbayes.R
+data_process/PB.jags
+plot/evaluate_pureBayes.R
+data_process/supp_tumor_purity_qc.R
+data_process/prepare_Pyclone_input1.R

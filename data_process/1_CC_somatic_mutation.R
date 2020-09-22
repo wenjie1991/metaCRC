@@ -18,28 +18,32 @@ library(readr)
 files <- dir("../data/CC_annovar_output/03_genotype_field/", full.names = T)
 person <- str_match(files, "(ID|AMC|EV-|P-)\\d+")[, 1]
 mutTabs <- llply(files, function(file) {
-    fread(file, sep = "\t")[, .(CHROM, POS, REF, ALT, T.AD, N.AD)] %>% unique
+    fread(file, quote = "")[, .(CHROM, POS, REF, ALT, T.AD, N.AD)] %>% unique
 })
 files <- dir("../data/CC_annovar_output/02_annovar/", "gene.hg19_multianno", full.names = T)
 annGeneTabs <- llply(files , function(file) {
-    fread(file, sep = ",") %>% 
+    fread(files[2], sep = ",") %>% 
         rename(c("Chr" = "CHROM", "Start" = "POS", "Ref" = "REF", "Alt" = "ALT")) %>% unique %>% 
         setkey(CHROM, POS, REF, ALT)
 })
 files <- dir("../data/CC_annovar_output/02_annovar/", "local.hg19_multianno", full.names = T)
 annLocalTabs <- llply(files , function(file) {
-    fread(file, sep = ",") %>% 
-        rename(c("Chr" = "CHROM", "Start" = "POS", "Ref" = "REF", "Alt" = "ALT")) %>% unique %>% 
-        setkey(CHROM, POS, REF, ALT)
+    res = fread(file, sep = ",") %>% 
+        rename(c("Chr" = "CHROM", "Start" = "POS", "Ref" = "REF", "Alt" = "ALT")) %>% unique
+    if (is.logical(res$ALT[1])) {
+        res$ALT = rep("T", length(res$ALT))
+    }
+    setkeyv(res, c("CHROM", "POS", "REF", "ALT"))
+    res
 })
 
 
 parseAD <- function(data){
     ## input CHROM POS REF ALT C.AD M.AD N.AD
     ## return CHROM, POS, REF, ALT, C.F, C.A, M.F, M.A, N.F, N.A
-    T <- data$T.AD %>% sub("\\.", "0,0", .) %>%strsplit(",")%>% ldply(as.numeric) %>% set_names(c("T.R", "T.A"))
-    N <- data$N.AD %>% sub("\\.", "0,0", .) %>%strsplit(",")%>% ldply(as.numeric) %>% set_names(c("N.R", "N.A"))
-    data.table(data[, .(CHROM, POS, REF, ALT)], T, N, key = c("CHROM", "POS", "REF", "ALT"))
+    T.depth <- data$T.AD %>% sub("\\.", "0,0", .) %>%strsplit(",")%>% ldply(as.numeric) %>% set_names(c("T.R", "T.A"))
+    N.depth <- data$N.AD %>% sub("\\.", "0,0", .) %>%strsplit(",")%>% ldply(as.numeric) %>% set_names(c("N.R", "N.A"))
+    data.table(data[, .(CHROM, POS, REF, ALT)], T.depth, N.depth, key = c("CHROM", "POS", "REF", "ALT"))
 }
 
 #' # Somatic Identify Mutation
@@ -81,22 +85,3 @@ annTabs$Gene.refGene <- unlist(geneName)
 
 # output the raw mutation result
 write_tsv(annTabs, "../data/01_CC_somaticMutation_raw.txt")
-
-# Filter the mutation by the effects of the mutations
-annTabs2 <- annTabs[
-    (!(ExonicFunc.refGene %in% c("synonymous SNV")))
-    & (Func.refGene %in% c("exonic", "exonic;exonic", "exonic;splicing", "ncRNA_exonic", "splicing"))
-    & (as.numeric(esp6500siv2_all) < 0.01 | esp6500siv2_all == "." | is.na(esp6500siv2_all)) 
-    & (as.numeric(`1000g2015aug_all`) < 0.01 | `1000g2015aug_all` == "." | is.na(`1000g2015aug_all`))
-    & (as.numeric(ExAC_ALL) < 0.05 | ExAC_ALL == "." | is.na(ExAC_ALL))
-    & ((ExonicFunc.refGene %in% c("frameshift deletion", "frameshift insertion", "stopgain"))
-        | (SIFT_pred == "D" | Polyphen2_HDIV_pred == "D")
-        | (Func.refGene %in% "splicing"))
-    ]
- 
-# Output filtered mutation
-setkeyv(annTabs2, c('CHROM', 'POS', 'REF', 'ALT'))
-setkeyv(normalMutTabs, c('CHROM', 'POS', 'REF', 'ALT'))
-annTabs2 <- annTabs2[!normalMutTabs]
-write_tsv(annTabs2, "../data/01_CC_somaticMutation.txt")
-

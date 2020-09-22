@@ -5,7 +5,7 @@ library(stringr)
 library(RColorBrewer)
 library(Matrix)
 
-colors = c("grey", RColorBrewer::brewer.pal(6, "YlGnBu"))
+colors = c('grey', RColorBrewer::brewer.pal(6, "YlGnBu"))
 cluster_used_n = length(colors)
 
 init = c("10000", "100000", "1000000", "10000000")
@@ -55,8 +55,8 @@ draw_tumor = function(init_x, cell_n_x, batch_x)  {
     dat[, clone_color := color_map[clone_cluster]]
     #     table(dat$clone_color)
 
-    file_name = paste0("primary_metastasis_", init_x, "init_", cell_n_x, "meta_cell_n_", batch_x, ".svg")
-    svg(paste0("./result_depth50_draw/", file_name), height=7/2*1.2, width=12/2)
+    file_name = paste0("primary_metastasis_", init_x, "init_", cell_n_x, "meta_cell_n_", batch_x, ".pdf")
+    pdf(paste0("../data/result_depth50_draw/", file_name), height=7/2*1.2, width=12/2)
     par(bty='n')
     with(dat[type == "primary"], plot(x = x - 60, y = y - 60, col = clone_color, xlim = c(-50, 160), ylim = c(-50, 50), pch = 15, cex=0.25, xaxt='n', yaxt='n', xlab="", ylab=""))
     with(dat[type == "meta"], points(x = x - 60 + 80, y = y - 60, col = clone_color, pch = 15, cex=0.25))

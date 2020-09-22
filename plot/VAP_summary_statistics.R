@@ -1,4 +1,8 @@
-# input         ./data/result_depth50/result_dt.tsv
+# input         ../data/result_depth50/result_dt.tsv
+#               ../data/result_depth50/result_dt.tsv
+#               ../data/phenotype.csv
+#               ../data/00_mean_coverage.tsv
+#               ../data/VAP_real_data/patient_metrics.csv
 # output        Figure5A, Figure5B, Figure5C
 
 library(ggplot2)
@@ -10,7 +14,7 @@ library(RColorBrewer)
 colors = brewer.pal(5, "Blues")[c(3, 5)]
 colors[3:5] =  brewer.pal(5, "Greens")[c(3:5)]
 
-dat = fread("./result_depth50/result_dt.tsv")
+dat = fread("../data/result_depth50/result_dt.tsv")
 dat[, SampleType := revalue(subA, c("maf1" = "primary", "maf2" = "primary", "maf3" = "primary", "maf4" = "primary", "maf5" = "metastasis", "maf6" = "metastasis", "maf7" = "metastasis", "maf8" = "metastasis")) %>% paste("-", revalue(subB, c("maf1" = "primary", "maf2" = "primary", "maf3" = "primary", "maf4" = "primary", "maf5" = "metastasis", "maf6" = "metastasis", "maf7" = "metastasis", "maf8" = "metastasis")), sep="")]
 dat[, KSD := as.numeric(KSD)]
 dat[, FST := as.numeric(FST)]
@@ -45,14 +49,14 @@ ggplot(dat[SampleType == "primary-metastasis" & selection == 0 & meta_cell_n %in
 library(stringr)
 
 
-cd = fread("../../data/phenotype.csv")[!(pathoID %in% c("200825371", "201119999"))]
+cd = fread("../data/phenotype.csv")
 cd[grepl("^20", pathoID), patientID := paste0("ID", substr(pathoID, 3, 9))]
 
 
-coverage = fread("../../data/00_mean_coverage.tsv")
+coverage = fread("../data/00_mean_coverage.tsv")
 unqualify_sample = coverage[mean < 50 & !grepl("sn$", sample_name), sample_name] %>% str_match(., "(^\\w+)_") %>% extract(, 2) %>% unique
 
-real_dat = fread("../00_real_data/patient_metrics.csv")[!(patientID %in% c("ID0825371", "ID1119999"))]
+real_dat = fread("../data/VAP_real_data/patient_metrics.csv")[!(patientID %in% c("ID0825371", "ID1119999"))]
 dat_sub1 = real_dat[grepl("^(AMC)|(ID11)", patientID)][, subset := paste0("1.All(", .N, ")")][!is.na(KSD)]
 dat_sub2 = dat_sub1[!(grepl("^ID", patientID) & patientID %in% cd[Both_treated != "Chemonaive", patientID])][, subset := paste0("2.Remove treated(", .N, ")")]
 dat_sub3 = dat_sub2[!patientID %in% unqualify_sample][, subset := paste0("3.Remove low depth(", .N, ")")]
