@@ -41,6 +41,6 @@ for (i in 1:length(personList)) {
 		geom_point(aes(y = mean), size=5, alpha=0.5) + 
 		geom_line(aes(y = mean, group = cluster_id), alpha=0.7) + 
 		labs(color = "Cluster ID", title = personID) +
-		xlab("Sample Type") + ylab("CCF") + theme0
+		xlab("Sample Type") + ylab("CCF") + theme0 + ylim(c(0, 1))
 	print(p)
 }

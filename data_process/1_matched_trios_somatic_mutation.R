@@ -3,7 +3,6 @@
 #           ../data/phenotype.csv
 # output    ../data/01_trios_somaticMutation_raw.txt
 #           ../data/01_trios_somaticMutation.txt
-#           ../data/01_tumor_purity.tsv
 
 library(data.table)
 library(magrittr)

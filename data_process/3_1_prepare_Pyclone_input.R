@@ -1,5 +1,5 @@
 # input         ../data/01_trios_somaticMutation_raw.txt
-# output        ../data/01_prepare_data.allele_frequency.output.tsv
+# output        ../data/01_prepare_data.allele_frequency.output2.tsv
 
 annTabs = fread("../data/01_trios_somaticMutation_raw.txt")
 

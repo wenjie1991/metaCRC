@@ -58,7 +58,8 @@ fisher_result = sapply(1:nrow(dat_combind_sub), function(i) {
         freq_n_p_meta, n_meta_trios - freq_n_p_meta,
         freq_n_m_naive, n_naive_trios - freq_n_m_naive,
         freq_n_m_both, n_both_trios - freq_n_m_both,
-        freq_n_m_meta, n_meta_trios - freq_n_m_meta)] %>% unlist %>% matrix(nrow=2)
+        freq_n_m_meta, n_meta_trios - freq_n_m_meta
+        )] %>% unlist %>% matrix(nrow=2)
     c(
         all = fisher.test(m)$p.value, 
         pNaive_pBoth = fisher.test(m[, c(1, 2)])$p.value,
@@ -66,7 +67,11 @@ fisher_result = sapply(1:nrow(dat_combind_sub), function(i) {
         pNaive_mMeta = fisher.test(m[, c(4, 6)])$p.value,
         pNavie_mNaive = fisher.test(m[, c(1, 4)])$p.value,
         pBoth_mBoth = fisher.test(m[, c(2, 5)])$p.value,
-        pMeta_mMeta = fisher.test(m[, c(3, 6)])$p.value
+        pMeta_mMeta = fisher.test(m[, c(3, 6)])$p.value,
+        pNaive_pMeta = fisher.test(m[, c(1, 3)])$p.value,
+        pBoth_pMeta = fisher.test(m[, c(2, 3)])$p.value,
+        mNaive_mMeta = fisher.test(m[, c(4, 6)])$p.value,
+        mBoth_mMeta = fisher.test(m[, c(5, 6)])$p.value
         )
     })
 

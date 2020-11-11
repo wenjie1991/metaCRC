@@ -1,3 +1,10 @@
+multiregion_VAF.R
+```
+# input         ../data/multiregion_biopsies/03_annotation/
+#               ../data/multiregion_biopsies_facet_purity.tsv
+#               ../data/multiregion_purbyes_estimateion.tsv
+# output        Figure2C, Figure2D
+```
 pheatmap_chemo.R
 ```
 # input         ../data/02_mutDT.tsv
@@ -22,15 +29,23 @@ draw_virtual_tumor.R
 # input         ../data/depth50_draw/
 # output        Figure3B, Figure3C
 ```
-multiregion.R
+evaluate_pureBayes.R
 ```
-# input         ../data/multiregion_biopsies/03_annotation/
-# output        Figure2C, Figure2D
+## Legacy purity
+## Purebayes with synonymous mutation as input
+## Purebayes use FACETS CNV information
+## Purebayes result use FACETS CNV infor & with synonymous mutation as input
+## FACETS CNV
 ```
 visualize_pyclone_result.R
 ```
 # input         ../data/pyclone/
 # output        FigureS9
+```
+FFPE_artifical_mutation.R
+```
+# input         ../data/01_trios_somaticMutation_raw.txt
+# output        Figure S10A, Figure S10B, Figure S10C
 ```
 mutation_frequency_therapy.R
 ```
@@ -85,7 +100,11 @@ mutation_frequency_location.R
 ```
 VAP_summary_statistics.R
 ```
-# input         ./data/result_depth50/result_dt.tsv
+# input         ../data/result_depth50/result_dt.tsv
+#               ../data/result_depth50/result_dt.tsv
+#               ../data/phenotype.csv
+#               ../data/00_mean_coverage.tsv
+#               ../data/VAP_real_data/patient_metrics.csv
 # output        Figure5A, Figure5B, Figure5C
 ```
 lilloplot.R
@@ -101,4 +120,3 @@ mutation_frequency_resection_time.R
 #           ../data/02_Metastasis_mut_rate_sub.tsv
 # output    FigureS5
 ```
-

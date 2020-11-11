@@ -1,12 +1,18 @@
-prepare_Pyclone_input2.R
-```
-# input         ../data/01_prepare_data.allele_frequency.output.tsv
-# output        ../data/pyclone/tsv/
-```
 run_pyclone.sh
 ```
-# input         ../data/pyclone/tsv/
-# output        ../data/pyclone/result
+#!/bin/bash -
+```
+ascat_analysis.R
+```
+# dt = fread("../data/multiregion_biopsies/03_annotation/CHET54_gene.hg19_multianno.csv")
+```
+matched_trios_purbayes.R
+```
+# Input         ../data/01_trios_somaticMutation_raw.txt
+# Output        ../data/01_tumor_purity.tsv
+#               ../data/01_tumor_purity_syn.tsv
+#               ../data/01_tumor_purity_facetscnv.tsv
+#               ../data/01_tumor_purity_facetscnvsyn.tsv
 ```
 2_prior_mut_CC.R
 ```
@@ -19,6 +25,11 @@ run_pyclone.sh
 #               ../data/02_meta_stage_CC_mut_rate.tsv
 #               ../data/02_meta_CC_mut_rate.tsv
 ```
+multiregion_tumor_purity_purbyes.R
+```
+# input         ../data/multiregion_biopsies/03_annotation/
+# output        ../data/multiregion_purbyes_estimateion.tsv
+```
 1_CC_somatic_mutation.R
 ```
 # Input         ../data/CC_annovar_output/03_genotype_field/
@@ -30,7 +41,7 @@ run_pyclone.sh
 prepare_Pyclone_input1.R
 ```
 # input         ../data/01_trios_somaticMutation_raw.txt
-# output        ../data/01_prepare_data.allele_frequency.output.tsv
+# output        ../data/01_prepare_data.allele_frequency.output2.tsv
 ```
 2_prior_mut_trios.R
 ```
@@ -63,6 +74,15 @@ prepare_Pyclone_input1.R
 #               ../data/02_Metastasis_mut_rate_Oncotarget.tsv
 #               ../data/02_mutDT.tsv
 ```
+facets_analysis_trios.R
+```
+# input         ../data/matched_triols_annovar_output/*
+# output        ../data/tumor_purity_facet.tsv
+```
+supp_tumor_purity_qc.R
+```
+# tumor purity estimated by Purebayes,
+```
 1_matched_trios_somatic_mutation.R
 ```
 # input     ../data/matched_triols_annovar_output/03_genotype_field/
@@ -70,7 +90,20 @@ prepare_Pyclone_input1.R
 #           ../data/phenotype.csv
 # output    ../data/01_trios_somaticMutation_raw.txt
 #           ../data/01_trios_somaticMutation.txt
-#           ../data/01_tumor_purity.tsv
+```
+prepare_Pyclone_with_FACETS_cnv.R
+```
+# Input: ../data/01_prepare_data.allele_frequency.output2.tsv
+# Output: ../data/pyclone/tsv_FACETS_cnv
+```
+facets_analysis_multiregion.R
+```
+# input         ../data/multiregion_biopsies/*
+# output        ../data/multiregion_biopsies_facet_purity.tsv
+```
+facets_analysis.R
+```
+#     res = do_fit(tumor_name_v[3])
 ```
 0_analysis_coverage.R
 ```

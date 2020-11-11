@@ -1,6 +1,6 @@
 #!/usr/bin/env perl6
 
-my @function_file = dir;
+my @function_file = (dir).map({ $_ if $_ ~~ /\.R/ or $_ ~~ /\.sh/ });
 for @function_file -> $function_file {
     next if $function_file ~~ /^\./;
     my $m = $function_file.slurp ~~ /(\#.*?\n\s*\n)/;

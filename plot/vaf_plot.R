@@ -1,5 +1,6 @@
 # input         ../data/01_trios_somaticMutation_raw.txt
 #               ../data/01_trios_somaticMutation.txt")
+#               ../data/tumor_purity_facet.tsv
 # output        Figure2.A, Figure2.B
 #               ../data/02_mutDT.tsv
 
@@ -25,12 +26,13 @@ theme <- theme_bw() + theme(
     ) 
 
 plot_AF_line = function(geneSymbol) {
-    data = deltaAFlong[Gene.refGene %in% geneSymbol, .(sampleType = AF_Type, AF, sampleMut = paste0(personID, loci), source)]
+    geneSymbol = "TP53"
+    data = deltaAFlong_raw[Gene.refGene %in% geneSymbol & loci %in% deltaAFlong$loci, .(sampleType = AF_Type, AF, sampleMut = paste0(personID, loci), source)]
     p = ggplot(data=data, aes(x = sampleType %>% revalue(c(AF.N = "Normal", AF.M = "Metastasis", AF.C = "Primary")), y = AF)) +
         geom_line(aes(group = sampleMut, color = source)) +
         geom_point(aes(color = source)) +
         theme + theme(legend.position = "right", axis.text.x = element_text(size = 15, angle = 0, hjust = 0.5)) + 
-        labs(title = paste0(geneSymbol, " mutation AF")) + xlab("Tumor Site") + ylab("VAF")
+        labs(title = paste0(geneSymbol, " mutation AF")) + xlab("Tumor Site") + ylab("VAF") +
         ylim(0, 1)
     p
 }
@@ -50,6 +52,9 @@ n_sub_metastasis = annTabs_raw[Resection_timing == "Subsequent"]$personID %>% ta
 n_naive_metastasis = annTabs_raw[Both_treated == "Chemonaive"]$personID %>% table %>% length
 n_both_metastasis = annTabs_raw[Both_treated == "Both_treated"]$personID %>% table %>% length
 n_meta_metastasis = annTabs_raw[Both_treated == "Metastasis_treated"]$personID %>% table %>% length
+
+# Cancer cell frequency
+ccf_d = fread("../data/tumor_purity_facet.tsv") %>% na.omit
 
 #' # Count the sample size
 (annTabs_raw[, .(personID, primary_site)] %>% unique)[, primary_site] %>% table(useNA = "ifany")
@@ -76,10 +81,6 @@ somaticMutationPM$Gene.refGene %<>% factor(
     levels = somaticMutationPM[, .(s=sum(n)), by=Gene.refGene][order(s, decreasing=T), Gene.refGene])
 somaticMutation$Gene.refGene %<>% factor(levels=somaticMutation$Gene.refGene)
 
-#' # Candidate Gene
-
-candidateGene = somaticMutationPM[n > 4, Gene.refGene] %>% unique
-
 #' ### Allelle Frequency 
 deltaAF_all <- annTabs2[, .(
     personID
@@ -95,30 +96,28 @@ deltaAF_all <- annTabs2[, .(
     , depth.C = C.A + C.R %>% as.numeric
     , Gene.refGene)] %>% data.table
 AF_all = deltaAF_all
-# AF_all[, purity_p := max(AF.C[Gene.refGene == "APC"]), by=personID]
-# AF_all[, purity_m := max(AF.M[Gene.refGene == "APC"]), by=personID]
-# AF_all = AF_all[purity_p > 0 & purity_m > 0]
+AF_all= merge(AF_all, ccf_d, by = "personID", all.x = T)
+AF_all[is.na(purity_p), purity_p := 1]
+AF_all[is.na(purity_m), purity_m := 1]
 AF_all[, deltaAF := (AF.M) - (AF.C)]
+AF_all[, deltaAF_corrected := (AF.M / purity_m) - (AF.C / purity_p)]
 
-# deltaAF = AF_all[Gene.refGene %in% candidateGene][purity_p > 0.20 & purity_m > 0.20]
-deltaAF = AF_all[Gene.refGene %in% candidateGene]
+deltaAF = AF_all
 deltaAF$source %<>% revalue(c("ID+++++++"="Local", "AMC+"="Lim_2015", "EV-+++"="Brannon_2014", "P-+++++++"="Yaeger_2018"))
 
-deltaAFlong <- melt(deltaAF, id.vars=c("personID", "deltaAF", "Gene.refGene", "source", "loci")
+deltaAFlong_raw <- melt(deltaAF, id.vars=c("personID", "deltaAF",  "deltaAF_corrected", "Gene.refGene", "source", "loci")
     , measure.vars=c("AF.M", "AF.C", "AF.N")
     , value.name="AF", variable="AF_Type")
-deltaAFlong$AF_Type %<>% factor(levels = c("AF.N", "AF.C", "AF.M"))
+deltaAFlong_raw$AF_Type %<>% factor(levels = c("AF.N", "AF.C", "AF.M"))
 
 
-exonFreq = annTabs2[(M.A / (M.A + M.R + 1) > tumorPurityThreshold & M.A > 2), .(symbol = Gene.refGene, freq_n = length(unique(personID))), by = Gene.refGene]
-exonFreq$freq =  exonFreq$freq / n_metastasis * 100
-exonFreqM = exonFreq
+selected_genes = c("APC", "TP53", "KRAS", "PIK3CA", "SMAD4", "FBXW7", "AMER1", "BRAF", "ATM")
+deltaAFlong = deltaAFlong_raw[AF_Type == "AF.C", .(AF = max(AF), deltaAF = deltaAF[which.max(AF)], deltaAF_corrected = deltaAF_corrected[which.max(AF)], loci=loci[which.max(AF)]), by=c("Gene.refGene", "source", "personID", "AF_Type")]
+deltaAFlong = deltaAFlong[Gene.refGene %in% selected_genes]
+deltaAFlong$Gene.refGene %<>% factor(levels = selected_genes)
 
-deltaAF$Gene.refGene %<>% factor(levels = exonFreqM[order(freq, decreasing = T), symbol])
-deltaAFlong = deltaAFlong[AF_Type == "AF.M", .(AF = max(AF), deltaAF = deltaAF[which.max(AF)], loci=loci[which.max(AF)]), by=c("Gene.refGene", "source", "personID", "AF_Type")]
-deltaAFlong = deltaAFlong[Gene.refGene %in% exonFreqM[order(freq, decreasing = T), symbol][1:12]]
-
-#+ Allele Frequency Wilcox P lt 0.3,  fig.height=7, fig.width=13, dev='svg'
+#' ## VAF difference between Primary and metastasis 
+#+ Delta Allele Frequency,  fig.height=7, fig.width=13, dev='svg'
 deltaAFlong_draw = deltaAFlong[, .(Gene.refGene, deltaAF, source)] %>% unique
 deltaAFlong_draw$Gene.refGene %<>% factor(levels = deltaAFlong_draw[, .N, by=Gene.refGene][order(N, decreasing=T), Gene.refGene])
 ggplot(data= deltaAFlong_draw %>% unique, aes(x=Gene.refGene, deltaAF)) + 
@@ -127,7 +126,23 @@ ggplot(data= deltaAFlong_draw %>% unique, aes(x=Gene.refGene, deltaAF)) +
     xlab("Gene") + ylab("VAF_Metastasis - VAF_Primary") + theme
 
 #+ statistics Test
-deltaAFlong_draw[, .(p = wilcox.test(deltaAF)$p.value, n = .N), by = Gene.refGene]
+deltaAFlong_draw[, .(p = wilcox.test(deltaAF)$p.value, n = .N, median = median(deltaAF)), by = Gene.refGene]
+
+
+#' ## VAF difference between Primary and metastasis with correction
+#+ Delta Allele Frequency with correction,  fig.height=7, fig.width=13, dev='svg'
+deltaAFlong_draw = deltaAFlong[, .(Gene.refGene, deltaAF_corrected, deltaAF, source)] %>% unique
+deltaAFlong_draw$Gene.refGene %<>% factor(levels = deltaAFlong_draw[, .N, by=Gene.refGene][order(N, decreasing=T), Gene.refGene])
+ggplot(data= deltaAFlong_draw %>% unique, aes(x=Gene.refGene, deltaAF_corrected)) + 
+    geom_boxplot(alpha=0.2) + 
+    geom_jitter(width=0.3, aes(color=source), alpha=0.3, size=3) + 
+    xlab("Gene") + ylab("VAF_Metastasis - VAF_Primary") + theme
+
+deltaAFlong_draw[, .(p = wilcox.test(deltaAF_corrected)$p.value, n = .N, median = median(deltaAF_corrected)), by = Gene.refGene]
+deltaAFlong_draw[, .(p = wilcox.test(deltaAF)$p.value, n = .N, median = median(deltaAF)), by = Gene.refGene]
+
+deltaAFlong_draw[!grepl("Lim|Local",source) , .(p = wilcox.test(deltaAF_corrected)$p.value, n = .N, median = median(deltaAF_corrected)), by = Gene.refGene]
+deltaAFlong_draw[!grepl("Lim|Local",source), .(p = wilcox.test(deltaAF)$p.value, n = .N, median = median(deltaAF)), by = Gene.refGene]
 
 #' ### Allele Frequency of small Wilcox P value
 #+ AF by sample type,  fig.height=7, fig.width=10, dev='svg'
@@ -135,7 +150,7 @@ plot_AF_line("TP53")
 
 #' ### Allele Frequency v.s. depth for TP53
 #+ AF v.s. depth,  fig.height=7, fig.width=10, dev='svg'
-d = deltaAF[Gene.refGene == "TP53", .(source, AF.M, AF.C, depth.M, depth.C)]
+d = deltaAF[Gene.refGene == "TP53" & loci %in% deltaAFlong$loci, .(source, AF.M, AF.C, depth.M, depth.C)]
 d_long = d[, .(
     source = c(source, source)
     , AF = c(AF.M, AF.C)
@@ -167,7 +182,13 @@ color_label = c(
     )
 p + xlab("Depth") + ylab("VAF") + labs(color = "Sample Type") + scale_color_manual(labels = color_label, values = colors)
 
+g = ggplot(d_long) + aes(x = sample_type, y = depth) 
+g + geom_violin() + theme0 + labs(x = "Sample Type", y = "Depth")
+
 with(deltaAF_all[Gene.refGene == "TP53"], cor.test(AF.M, depth.M, method = "spearman"))
 dim(deltaAF_all[Gene.refGene == "TP53"])
 with(deltaAF_all[Gene.refGene == "TP53"], cor.test(AF.C, depth.C, method = "spearman"))
 with(deltaAF_all[Gene.refGene == "TP53"], cor.test(c(AF.M,AF.C), c(depth.M, depth.C), method = "spearman"))
+
+(d_long[sample_type == "Primary", depth] - d_long[sample_type == "Metastasis", depth]) %>% median
+wilcox.test(d_long[sample_type == "Primary", depth] - d_long[sample_type == "Metastasis", depth])
