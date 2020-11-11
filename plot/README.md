@@ -29,14 +29,6 @@ draw_virtual_tumor.R
 # input         ../data/depth50_draw/
 # output        Figure3B, Figure3C
 ```
-evaluate_pureBayes.R
-```
-## Legacy purity
-## Purebayes with synonymous mutation as input
-## Purebayes use FACETS CNV information
-## Purebayes result use FACETS CNV infor & with synonymous mutation as input
-## FACETS CNV
-```
 visualize_pyclone_result.R
 ```
 # input         ../data/pyclone/
